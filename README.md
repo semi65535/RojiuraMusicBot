@@ -1,14 +1,12 @@
 # RojiuraMusicBot
 
-**路地裏民のためのMusicBot**
+路地裏民のためのMusicBot
 
 > _空は青々と晴れていた。_
 
-[Just-Some-Bots/MusicBot](https://github.com/Just-Some-Bots/MusicBot)からフォーク
-
 ---
 
-## コマンド
+### コマンド
 
 > _高極蒼炎光線！！_
 
@@ -32,3 +30,13 @@
 ?disconnect | 現在参加中のボイスチャットからMusicBotを切断します
 ?volume \[volume] | ボリュームを変更します 0.01-100 Default: 25
 ?seek \<timestamp\> | \<timestamp\>へシーク
+
+---
+
+### 注意
+
+> _あまりの嬉しさに周りを飛び跳ねて転んだりもした。_
+
+* 正直Rythmbotくんの方が早いし有能です。
+* ニコニコ動画、３時間超えてる、ログインが必要な動画を再生するときだけ使うのがいいと思います。
+* ニコニコ動画は再生するまでがめちゃめちゃ長いです。（再生まで1分くらいかかる）
