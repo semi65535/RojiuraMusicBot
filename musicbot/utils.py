@@ -32,6 +32,18 @@ def write_file(filename, contents):
             f.write(str(item))
             f.write('\n')
 
+
+def format_time_ffmpeg(s):
+    total_hours = s / 3600
+    total_minutes = s / 60
+    total_seconds = s
+    hours = int(total_hours)
+    minutes = int(total_minutes - hours * 60)
+    seconds = int(total_seconds - minutes * 60 - hours * 3600)
+
+    return "{:02d}:{:02d}:{:02d}".format(hours, minutes, seconds)
+
+
 def paginate(content, *, length=DISCORD_MSG_CHAR_LIMIT, reserve=0):
     """
     Split up a large string or list of strings into chunks for sending to discord.

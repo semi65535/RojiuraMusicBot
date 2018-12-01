@@ -16,7 +16,7 @@ from collections import deque
 from shutil import get_terminal_size
 from websockets.exceptions import InvalidState
 
-from .utils import avg, _func_
+from .utils import avg, _func_, format_time_ffmpeg
 from .lib.event_emitter import EventEmitter
 from .constructs import Serializable, Serializer
 from .exceptions import FFmpegError, FFmpegWarning
@@ -109,6 +109,9 @@ class MusicPlayer(EventEmitter, Serializable):
         self.skip_state = None
         self.karaoke_mode = False
 
+        self.deliberately_killed = False
+        self.seek_timestamp = None
+
         self._volume = bot.config.default_volume
         self._play_lock = asyncio.Lock()
         self._current_player = None
@@ -135,6 +138,15 @@ class MusicPlayer(EventEmitter, Serializable):
 
     def skip(self):
         self._kill_current_player()
+
+    def goto_seconds(self, secs):
+        if (not self.current_entry) or secs >= self.current_entry.duration:
+            return False
+
+        c_entry = self.current_entry
+        c_entry.set_start(secs)
+        self.play_entry(c_entry)
+        return True
 
     def stop(self):
         self.state = MusicPlayerState.STOPPED
@@ -178,6 +190,10 @@ class MusicPlayer(EventEmitter, Serializable):
         self._kill_current_player()
 
     def _playback_finished(self, error=None):
+        if self.deliberately_killed:
+            self.deliberately_killed = False
+            return
+
         entry = self._current_entry
 
         if self._current_player:
@@ -305,6 +321,64 @@ class MusicPlayer(EventEmitter, Serializable):
 
                 self.emit('play', player=self, entry=entry)
 
+    def play_entry(self, entry):
+        self.loop.create_task(self._play_entry(entry))
+
+    async def _play_entry(self, entry):
+        """
+            Plays the provided entry.
+        """
+
+        log.info('_play_entry')
+        with await self._play_lock:
+            # In-case there was a player, kill it. RIP.
+            self.deliberately_killed = True
+            self._kill_current_player()
+
+            format_timestamp = format_time_ffmpeg(int(entry.start_seconds))
+
+            boptions = "-nostdin -ss {}".format(format_timestamp)
+            # aoptions = "-vn -b:a 192k"
+            if isinstance(entry, URLPlaylistEntry):
+                aoptions = entry.aoptions
+            else:
+                aoptions = "-vn"
+
+            log.info("Creating player with options: {} {} {}".format(boptions, aoptions, entry.filename))
+            log.ffmpeg("Creating player with options: {} {} {}".format(boptions, aoptions, entry.filename))
+
+            source = PCMVolumeTransformer(
+                FFmpegPCMAudio(
+                    entry.filename,
+                    before_options=boptions,
+                    options=aoptions,
+                    stderr=subprocess.PIPE
+                ),
+                self.volume
+            )
+            log.debug('Playing {0} using {1}'.format(source, self.voice_client))
+            self.voice_client.play(source, after=self._playback_finished)
+
+            self._current_player = self.voice_client
+
+            # I need to add ytdl hooks
+            self.state = MusicPlayerState.PLAYING
+            self._current_entry = entry
+
+            self.seek_timestamp = format_timestamp
+
+            self._stderr_future = asyncio.Future()
+
+            stderr_thread = Thread(
+                target=filter_stderr,
+                args=(self._current_player._player.source.original._process, self._stderr_future),
+                name="stderr reader"
+            )
+
+            stderr_thread.start()
+
+            self.emit('play', player=self, entry=entry)
+
     def __json__(self):
         return self._enclose_json({
             'current_entry': {
@@ -368,7 +442,7 @@ class MusicPlayer(EventEmitter, Serializable):
     @property
     def progress(self):
         if self._current_player:
-            return round(self._current_player._player.loops * 0.02)
+            return round(self._current_player._player.loops * 0.02) + (self.current_entry.start_seconds if self.current_entry is not None else 0)
             # TODO: Properly implement this
             #       Correct calculation should be bytes_read/192k
             #       192k AKA sampleRate * (bitDepth / 8) * channelCount

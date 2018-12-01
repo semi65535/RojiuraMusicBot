@@ -481,6 +481,9 @@ class MusicBot(discord.Client):
             elif self.config.now_playing_mentions:
                 newmsg = '%s - your song `%s` is now playing in `%s`!' % (
                     entry.meta['author'].mention, entry.title, player.voice_client.channel.name)
+            elif player.seek_timestamp is not None:
+                newmsg = 'Seek to {}'.format(player.seek_timestamp)
+                player.seek_timestamp = None
             else:
                 newmsg = 'Now playing in `%s`: `%s` added by `%s`' % (
                     player.voice_client.channel.name, entry.title, entry.meta['author'].name)
@@ -2057,6 +2060,39 @@ class MusicBot(discord.Client):
                 reply=True,
                 delete_after=20
             )
+
+    async def cmd_seek(self, player, timestamp):
+        """
+        Usage:
+            {command_prefix}seek <timestamp>
+
+        Go to the given timestamp in the format of: (minutes:seconds)
+        """
+
+        parts = timestamp.split(":")
+        if len(parts) < 1:  # Shouldn't occur, but who knows?
+            return Response("Please provide a valid timestamp", delete_after=20)
+        # seconds, minutes, hours, days
+        values = (1, 60, 60 * 60, 60 * 60 * 24)
+
+        secs = 0
+        for i in range(len(parts)):
+            try:
+                v = int(parts[i])
+            except:
+                continue
+
+            j = len(parts) - i - 1
+            if j >= len(values):  # If I don't have a conversion from this to seconds
+                continue
+
+            secs += v * values[j]
+
+        if player.current_entry is None:
+            return Response("Nothing playing!", delete_after=20)
+
+        if not player.goto_seconds(secs):
+            return Response("Timestamp exceeds song duration!", delete_after=20)
 
     async def cmd_volume(self, message, player, new_volume=None):
         """
