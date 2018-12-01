@@ -1,5 +1,7 @@
 @ECHO off
 
+SET HOME=%USERPROFILE%
+
 CHCP 65001 > NUL
 CD /d "%~dp0"
 
