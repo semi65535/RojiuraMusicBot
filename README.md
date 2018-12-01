@@ -1,29 +1,42 @@
-# MusicBot
+# RojiuraMusicBot
 
-**About this branch**
+路地裏民のためのMusicBot
 
-This branch of MusicBot is only compatible with the `rewrite` version of the discord.py library, which can be installed using `python3 -m pip install -U git+https://github.com/Rapptz/discord.py@rewrite#egg=discord.py[voice]`. It is also a dependency in `requirements.txt`, so should be automatically installed by the bot if you run `update.py`.
+> _空は青々と晴れていた。_
 
 ---
 
-[![GitHub release](https://img.shields.io/github/release/Just-Some-Bots/MusicBot.svg?style=flat-square)](https://just-some-bots.github.io/MusicBot/)
-[![Python](https://img.shields.io/badge/python-3.5%2C%203.6-blue.svg?style=flat-square)](https://www.python.org/downloads/)
-[![Discord](https://discordapp.com/api/guilds/129489631539494912/widget.png?style=shield)](https://discord.gg/bots)
+### コマンド
 
-MusicBot is the original Discord music bot written for [Python](https://www.python.org "Python homepage") 3.5+, using the [discord.py](https://github.com/Rapptz/discord.py) library. It plays requested songs, from YouTube and other services, into a Discord server (or multiple servers) and if the queue becomes empty it will play through a list of existing songs, if configured to do so. The bot features a permissions system allowing owners to restrict commands to certain people. As well as playing songs, MusicBot is capable of streaming live media into a voice channel (experimental).
+> _高極蒼炎光線！！_
 
-![Main](https://i.imgur.com/EZljY52.png)
+コマンド | 効果
+------------ | -------------
+?play \<URL\> | \<URL\>の動画を再生します（Youtubeやニコニコなど）
+?perms \[@user] | 現在の権限で許可されているコマンドを表示します
+?queue | 現在のキューを表示します
+?np | 現在再生中の楽曲を表示します
+?skip | 現在再生中の楽曲をスキップします
+?search \[service] \[number] \<query\> | \[service]で\<query\>を検索した結果を\[number]個表示します
+?id \[@user] | ユーザーのIDを表示します
+?help \[command] | コマンドのヘルプを表示します
+?clean \[range] | MusicBotのチャットを消去します Default: 50, Max: 1000
+?shuffle | 現在のキューをシャッフルします
+?clear | キューをクリアします
+?pause | 現在再生中の楽曲を一時停止します
+?resume | 一時停止中の楽曲を再開します
+?summon | 現在参加中のボイスチャットにMusicBotを参加させます
+?remove \[number] | キューから[number]の楽曲を削除します
+?disconnect | 現在参加中のボイスチャットからMusicBotを切断します
+?volume \[volume] | ボリュームを変更します 0.01-100 Default: 25
+?seek \<timestamp\> | \<timestamp\>へシーク
 
-## Setup
-Setting up the MusicBot is relatively painless - just follow one of the [guides](https://just-some-bots.github.io/MusicBot/) we have created for you. After that, you can begin to configure your bot to ensure that it can connect to Discord.
+---
 
-The main configuration file is `config/options.ini`, but is not included. Simply make a copy of `example_options.ini` and rename to `options.ini`. See `example_options.ini` for more information on how to configure it.
+### 注意
 
-### Commands
+> _あまりの嬉しさに周りを飛び跳ねて転んだりもした。_
 
-There are many commands that can be used with the bot. Most notably, the `play <url>` command (preceded by your command prefix) will download, process, and play a song from YouTube or a similar site. A full list of commands are available [here](https://just-some-bots.github.io/MusicBot/using/commands/ "Commands").
-
-### Further reading
-
-* [Support Discord server](https://discord.gg/bots)
-* [Project license](LICENSE)
+* 正直Rythmbotくんの方が早いし有能です。
+* ニコニコ動画、３時間超えてる、ログインが必要な動画を再生するときだけ使うのがいいと思います。
+* ニコニコ動画は再生するまでがめちゃめちゃ長いです。（再生まで1分くらいかかる）
