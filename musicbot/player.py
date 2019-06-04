@@ -7,7 +7,7 @@ import audioop
 import subprocess
 import re
 
-from discord import FFmpegPCMAudio, PCMVolumeTransformer
+from discord import FFmpegPCMAudio, PCMVolumeTransformer, AudioSource
 
 from enum import Enum
 from array import array
@@ -96,6 +96,20 @@ class MusicPlayerState(Enum):
     def __str__(self):
         return self.name
 
+class SourcePlaybackCounter(AudioSource):
+    def __init__(self, source, progress = 0):
+        self._source = source
+        self.progress = progress
+
+    def read(self):
+        res = self._source.read()
+        if res:
+            self.progress += 1
+        return res
+
+    def get_progress(self):
+        return self.progress * 0.02
+
 
 class MusicPlayer(EventEmitter, Serializable):
     def __init__(self, bot, voice_client, playlist):
@@ -118,6 +132,8 @@ class MusicPlayer(EventEmitter, Serializable):
         self._current_entry = None
         self._stderr_future = None
 
+        self._source = None
+
         self.playlist.on('entry-added', self.on_entry_added)
 
     @property
@@ -127,8 +143,8 @@ class MusicPlayer(EventEmitter, Serializable):
     @volume.setter
     def volume(self, value):
         self._volume = value
-        if self._current_player:
-            self._current_player.source.volume = value
+        if self._source:
+            self._source._source.volume = value
 
     def on_entry_added(self, playlist, entry):
         if self.is_stopped:
@@ -201,14 +217,12 @@ class MusicPlayer(EventEmitter, Serializable):
             self._kill_current_player()
 
         self._current_entry = None
+        self._source = None
 
         if self._stderr_future.done() and self._stderr_future.exception():
             # I'm not sure that this would ever not be done if it gets to this point
             # unless ffmpeg is doing something highly questionable
             self.emit('error', player=self, entry=entry, ex=self._stderr_future.exception())
-
-        if not self.is_stopped and not self.is_dead:
-            self.play(_continue=True)
 
         if not self.bot.config.save_videos and entry:
             if not isinstance(entry, StreamPlaylistEntry):
@@ -259,7 +273,7 @@ class MusicPlayer(EventEmitter, Serializable):
         """
             Plays the next entry from the playlist, or resumes playback of the current entry if paused.
         """
-        if self.is_paused:
+        if self.is_paused and self._current_player:
             return self.resume()
 
         if self.is_dead:
@@ -291,17 +305,19 @@ class MusicPlayer(EventEmitter, Serializable):
 
                 log.ffmpeg("Creating player with options: {} {} {}".format(boptions, aoptions, entry.filename))
 
-                source = PCMVolumeTransformer(
-                    FFmpegPCMAudio(
-                        entry.filename,
-                        before_options=boptions,
-                        options=aoptions,
-                        stderr=subprocess.PIPE
-                    ),
-                    self.volume
+                self._source = SourcePlaybackCounter(
+                    PCMVolumeTransformer(
+                        FFmpegPCMAudio(
+                            entry.filename,
+                            before_options=boptions,
+                            options=aoptions,
+                            stderr=subprocess.PIPE
+                        ),
+                        self.volume
+                    )
                 )
-                log.debug('Playing {0} using {1}'.format(source, self.voice_client))
-                self.voice_client.play(source, after=self._playback_finished)
+                log.debug('Playing {0} using {1}'.format(self._source, self.voice_client))
+                self.voice_client.play(self._source, after=self._playback_finished)
 
                 self._current_player = self.voice_client
 
@@ -313,7 +329,7 @@ class MusicPlayer(EventEmitter, Serializable):
 
                 stderr_thread = Thread(
                     target=filter_stderr,
-                    args=(self._current_player._player.source.original._process, self._stderr_future),
+                    args=(self._source._source.original._process, self._stderr_future),
                     name="stderr reader"
                 )
 
@@ -441,8 +457,8 @@ class MusicPlayer(EventEmitter, Serializable):
 
     @property
     def progress(self):
-        if self._current_player:
-            return round(self._current_player._player.loops * 0.02) + (self.current_entry.start_seconds if self.current_entry is not None else 0)
+        if self._source:
+            return round(self._source.get_progress()) + (self.current_entry.start_seconds if self.current_entry is not None else 0)
             # TODO: Properly implement this
             #       Correct calculation should be bytes_read/192k
             #       192k AKA sampleRate * (bitDepth / 8) * channelCount
